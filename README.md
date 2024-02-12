@@ -14,3 +14,6 @@ A basic web scraper for the new NHL API. Additions will be made as I get to them
 
 ### Other Functions to Implement
 - ?
+
+### v1.1 (Beta)
+Goal is to improve the scraping speed of v1.0. 
