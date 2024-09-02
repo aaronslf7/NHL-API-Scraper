@@ -33,7 +33,6 @@
 # ## Current State
 # 
 # - The shift data implementation has been corrected so that on-ice players are by-and-large correct over stoppages (as far as I can tell). There are a few discrepancies (bugs) that need to be found and corrected still. 
-# - Little bug on some games for `situationCode`
 # 
 # <br>
 # 
@@ -388,10 +387,6 @@ def parse_event(play_dict):
     
     event_dict = dict()
     
-    for key in event_dict_keys:
-        if key not in event_dict.keys():
-            event_dict.update({ key : None})
-    
     # Common play items across all plays
     event_dict['Period'] = play_dict['periodDescriptor']['number']
     event_dict['Event_tc'] = play_dict['typeCode']
@@ -399,9 +394,9 @@ def parse_event(play_dict):
     event_dict['Time_Remaining'] = play_dict['timeRemaining']
     event_dict['Time_Elapsed'] = play_dict['timeInPeriod']
     if 'situationCode' in play_dict.keys():
-        event_dict['Strength'] = play_dict['situationCode']
+        event_dict['Strength'] = str(play_dict['situationCode'])
     else:
-        event_dict['Strength'] = '1551' # Default
+        event_dict['Strength'] = '1551'
     event_dict['sortOrder'] = play_dict['sortOrder']
     
       
@@ -416,39 +411,36 @@ def parse_event(play_dict):
         if event_dict['Event_tc'] == 502: # Faceoffs
             if 'winningPlayerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['winningPlayerId']
-                event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             if 'losingPlayerId' in play_dict['details'].keys():
                 event_dict['p2_ID'] = play_dict['details']['losingPlayerId']
             
         if event_dict['Event_tc'] == 503: # Hits
             if 'hittingPlayerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['hittingPlayerId']
-                event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             if 'hitteePlayerId' in play_dict['details'].keys():
                 event_dict['p2_ID'] = play_dict['details']['hitteePlayerId']
   
         if event_dict['Event_tc'] == 504: # Giveaways
             if 'playerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['playerId']
-                event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             
         if event_dict['Event_tc'] in [505,506,507,508]: # Goals, Shots_On_Goal, Missed_Shots, Blocked_Shots
             if 'scoringPlayerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['scoringPlayerId']
-                if 'eventOwnerTeamId' in play_dict['details'].keys():
-                    event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             if 'shootingPlayerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['shootingPlayerId']
-                if 'eventOwnerTeamId' in play_dict['details'].keys():
-                    event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             if 'assist1PlayerId' in play_dict['details'].keys():
                 event_dict['p2_ID'] = play_dict['details']['assist1PlayerId']
             if 'assist2PlayerId' in play_dict['details'].keys():
                 event_dict['p3_ID'] = play_dict['details']['assist2PlayerId']
             if 'blockingPlayerId' in play_dict['details'].keys():
                 event_dict['p2_ID'] = play_dict['details']['blockingPlayerId']
-                if 'eventOwnerTeamId' in play_dict['details'].keys():
-                    event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             if 'shotType' in play_dict['details'].keys():
                 event_dict['Type'] = play_dict['details']['shotType'].upper()
             if 'homeScore' in play_dict['details'].keys():
@@ -458,23 +450,26 @@ def parse_event(play_dict):
         if event_dict['Event_tc'] == 509: # Penalties
             if 'committedByPlayerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['committedByPlayerId']
-                event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             if 'drawnByPlayerId' in play_dict['details'].keys():
                 event_dict['p2_ID'] = play_dict['details']['drawnByPlayerId']
             if 'descKey' in play_dict['details'].keys():
-                event_dict['Type'] = ' '.join([play_dict['details']['typeCode'],'for',play_dict['details']['descKey'].upper()])
+                if play_dict['details']['typeCode'].upper() == 'PS':
+                    event_dict['Type'] = ' '.join([play_dict['details']['typeCode'].upper(),'for',play_dict['details']['descKey'][3:].upper()])
+                else:
+                    event_dict['Type'] = ' '.join([str(play_dict['details']['duration']),'minute',play_dict['details']['typeCode'],'for',play_dict['details']['descKey'].upper()])
             
         if event_dict['Event_tc'] == 525: # Takeaways
             if 'playerId' in play_dict['details'].keys():
                 event_dict['p1_ID'] = play_dict['details']['playerId']
-                event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             
         if event_dict['Event_tc'] == 535: # Delayed Penalties
             if 'eventOwnerTeamId' in play_dict['details'].keys():
-                event_dict['Ev_Team'] = teamCodes.get(play_dict['details']['eventOwnerTeamId'])
+                event_dict['Ev_Team'] = teamCodes.get(int(play_dict['details']['eventOwnerTeamId']))
             
         # Failed_Shot_Attempts?
-    
+        
     return event_dict
 
 
@@ -483,9 +478,10 @@ def parse_event(play_dict):
 
 def get_pbp(game_id):
     
+    url = 'https://api-web.nhle.com/v1/gamecenter/{}/play-by-play'.format(game_id)
+    
     try:
-        url = 'https://api-web.nhle.com/v1/gamecenter/{}/play-by-play'.format(game_id)
-        pbp = requests.get(url)
+        pbp = requests.get('https://api-web.nhle.com/v1/gamecenter/'+str(game_id)+'/play-by-play')
         pbp_data = pbp.json()
         roster = get_game_roster(game_id)
     
@@ -502,7 +498,7 @@ def get_pbp(game_id):
         pbp_df['Home_Team'] = pbp_data['homeTeam']['abbrev']
         pbp_df['p1_name'] = None
         pbp_df['p2_name'] = None
-        pbp_df['p3_name'] = None
+        pbp_df['p3_name'] = np.nan
         pbp_df['Game_Id'] = game_id
         
         pbp_df = pbp_df.sort_values(by='sortOrder',ascending=True).reset_index(drop=True)
@@ -528,25 +524,17 @@ def get_pbp(game_id):
                     
             pbp_df.at[i,'Home_Skaters'] = pbp_df.at[i,'Strength'][2]
             pbp_df.at[i,'Away_Skaters'] = pbp_df.at[i,'Strength'][1]
-            
-#         needed_columns = ['Game_Id','Period','Event_tc','Event','Time_Remaining','Time_Elapsed','Strength','Type','p1_ID',
-#                           'p1_name','Ev_Team','p2_ID','p2_name','p3_ID','p3_name','xC', 'yC','Home_Skaters','Away_Skaters',
-#                           'Home_Score','Away_Score','Away_Team','Home_Team','sortOrder']
-        
-#         for col in needed_columns:
-#             if col not in pbp_df.columns:
-#                 pbp_df[col] = None
                     
         return pbp_df[['Game_Id','Period','Event_tc','Event','Time_Remaining','Time_Elapsed','Strength','Type','p1_ID',
-                       'p1_name','Ev_Team','p2_ID','p2_name','p3_ID','p3_name','xC', 'yC','Home_Skaters','Away_Skaters',
-                       'Home_Score','Away_Score','Away_Team','Home_Team','sortOrder']]
+                       'p1_name','Ev_Team','p2_ID','p2_name','p3_ID','p3_name','Ev_Zone','xC', 'yC','Home_Skaters',
+                       'Away_Skaters','Home_Score','Away_Score','Away_Team','Home_Team','sortOrder']]
 
 
 # In[21]:
 
 
 # %%time
-# pbp = get_pbp(2022020160)
+# pbp = get_pbp(2023020005)
 
 
 # <br>
@@ -562,15 +550,15 @@ def parse_shifts(shift):
     
     shift_info = {}
     
-    if (shift['firstName'] == None) & (shift['lastName'] == None):
-        return shift_info
+    shift_info['player'] = ' '.join([shift['firstName'].upper(),shift['lastName'].upper()])
+    shift_info['playerId'] = shift['playerId']
+    shift_info['team'] = teamCodes.get(shift['teamId'])
+    shift_info['period'] = shift['period']
+    shift_info['start'] = shift['startTime']
+    if shift['endTime'] == '':
+        shift_info['end'] = None
     else:
-        shift_info['player'] = ' '.join([shift['firstName'].upper(),shift['lastName'].upper()])
-        shift_info['playerId'] = shift['playerId']
-        shift_info['team'] = teamCodes.get(shift['teamId'])
-        shift_info['period'] = shift['period']
-        shift_info['start'] = shift['startTime']
-        shift_info['end'] = shift['endTime']
+        shift_info['end'] = shift['endTime']    
     
     return shift_info
 
@@ -593,14 +581,14 @@ def get_shifts(game_id):
         shift_df = [parse_shifts(shift) for shift in shifts.get('data')]
         shift_df = pd.DataFrame(shift_df)
         
-        return shift_df.dropna(axis=0,how='any').reset_index(drop=True)
+        return shift_df
 
 
 # In[24]:
 
 
 # %%time
-# shifts = get_shifts(2022020160)
+# shifts = get_shifts(game_id)
 
 
 # ### Conditions for Start and End of a Shift
@@ -652,13 +640,14 @@ def check_if_on_ice_conditions_met(start,current,end,event_tc):
 def get_play_by_play(game_id):
     
     try:
+        print('Scraping Game Id',game_id)
         pbp = get_pbp(game_id)
         goalies = get_goalies_id(game_id)
         
         cols_to_add = ['awayPlayer1','awayPlayer1_id','awayPlayer2','awayPlayer2_id','awayPlayer3','awayPlayer3_id','awayPlayer4',
-                       'awayPlayer4_id','awayPlayer5','awayPlayer5_id','awayPlayer6','awayPlayer6_id','homePlayer1','homePlayer1_id',
-                       'homePlayer2','homePlayer2_id','homePlayer3','homePlayer3_id','homePlayer4','homePlayer4_id','homePlayer5',
-                       'homePlayer5_id','homePlayer6','homePlayer6_id','Away_Goalie','Away_Goalie_Id','Home_Goalie','Home_Goalie_Id']
+               'awayPlayer4_id','awayPlayer5','awayPlayer5_id','awayPlayer6','awayPlayer6_id','homePlayer1','homePlayer1_id',
+               'homePlayer2','homePlayer2_id','homePlayer3','homePlayer3_id','homePlayer4','homePlayer4_id','homePlayer5',
+               'homePlayer5_id','homePlayer6','homePlayer6_id','Away_Goalie','Away_Goalie_Id','Home_Goalie','Home_Goalie_Id']
         
         for col in cols_to_add:
             if col not in pbp.columns:
@@ -725,7 +714,7 @@ def get_play_by_play(game_id):
 # %%time
 
 # Testing
-# get_play_by_play(2022020160)
+# get_play_by_play(2020020001)
 
 
 # ### Getting Multiple Play-By-Plays
@@ -749,8 +738,8 @@ def get_multi_play_by_play(range_of_ids):
 
 # %%time
 
-# Testing
-# get_multi_play_by_play([2023020001,2023020002])
+# # Testing
+# get_multi_play_by_play([2020020001,2020020003])
 
 
 # <br>
